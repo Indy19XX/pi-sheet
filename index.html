@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PI Sheet Call Assistant</title>
+<meta name="description" content="Seller call script and Property Information Sheet for BOFSLO investors.">
+<meta name="theme-color" content="#1f6f5c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PI Sheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style id="appstyle">
+:root{--bg:#f4f5f7;--card:#fff;--ink:#16181d;--muted:#5f6673;--line:#e3e6eb;--accent:#1f6f5c;--accent-soft:#e6f2ee;--ai:#fff7e0;--ai-line:#f0c75e;--warn:#b4441c;--warn-soft:#fbece6;--blue:#2556a8;--blue-soft:#e9effa}
+@media (prefers-color-scheme:dark){:root{--bg:#121417;--card:#1b1e23;--ink:#eceef1;--muted:#9aa1ad;--line:#2c3038;--accent:#4fb79b;--accent-soft:#1d2e29;--ai:#2f2a1a;--ai-line:#8a7130;--warn:#f08a62;--warn-soft:#33221c;--blue:#7fa6ea;--blue-soft:#1d2533}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;padding:14px 22px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:-.01em}
+header h1 span{color:var(--accent)}
+header .meta{display:flex;gap:12px;margin-left:auto;flex-wrap:wrap}
+header label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+header input{width:150px}
+.wrap{display:grid;grid-template-columns:minmax(300px,390px) 1fr;gap:18px;padding:18px 22px;max-width:1400px;margin:0 auto}
+@media (max-width:900px){.wrap{grid-template-columns:1fr}.side{position:static!important;max-height:none!important}}
+.side{position:sticky;top:70px;align-self:start;display:flex;flex-direction:column;gap:14px;max-height:calc(100vh - 88px);overflow:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card h2 .n{background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:1px 7px;font-size:12px}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 12px}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button.rec{background:var(--warn);border-color:var(--warn);color:#fff}
+button:disabled{opacity:.5;cursor:default}
+.mic{width:100%;padding:11px;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;background:currentColor;display:inline-block}
+.rec .dot{animation:p 1s infinite}
+@keyframes p{50%{opacity:.25}}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.status{font-size:12px;color:var(--muted);margin-top:8px;min-height:17px}
+.status.err{color:var(--warn)}
+textarea,input[type=text],input[type=date],input[type=tel],input[type=email]{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:7px;padding:7px 9px;width:100%}
+textarea:focus,input:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+#transcript{min-height:190px;resize:vertical;font-size:13px}
+.interim{font-size:12px;color:var(--muted);font-style:italic;margin-top:6px;min-height:16px}
+.next{background:var(--blue-soft);border-color:transparent}
+.next h2{color:var(--blue)}
+.next .say{font-size:15px;font-weight:500}
+.next .done{color:var(--accent);font-weight:600}
+.sheet{display:flex;flex-direction:column;gap:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px 16px}
+.q{display:flex;flex-direction:column;gap:5px;border-radius:9px;padding:6px;margin:-6px;transition:background .2s}
+.q.wide{grid-column:1/-1}
+.q.current{background:var(--blue-soft);box-shadow:inset 3px 0 0 var(--blue)}
+.q label.l{font-size:12px;font-weight:600;color:var(--muted)}
+.q .s{font-size:13.5px;color:var(--ink)}
+.q .s::before{content:"Say: ";font-weight:600;color:var(--accent);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+.q.ai input,.q.ai textarea,.q.ai .seg{background:var(--ai);border-color:var(--ai-line)}
+.tag{display:none;font-size:10.5px;font-weight:600;color:#8a6510;background:var(--ai);border:1px solid var(--ai-line);border-radius:5px;padding:0 5px;margin-left:6px;cursor:help}
+@media (prefers-color-scheme:dark){.tag{color:#f0c75e}}
+.q.ai .tag{display:inline-block}
+.money{position:relative}
+.money::before{content:"$";position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.money input{padding-left:20px}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;overflow:hidden;width:max-content;max-width:100%}
+.seg button{border:0;border-radius:0;padding:6px 14px;background:transparent}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--accent);color:#fff}
+.checks{display:flex;flex-wrap:wrap;gap:6px}
+.checks button{padding:5px 10px;font-size:13px}
+.checks button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.banner{border-radius:10px;padding:10px 12px;font-size:13.5px;margin-bottom:12px}
+.banner.a{background:var(--accent-soft)}
+.banner.b{background:var(--blue-soft)}
+.banner.wait{background:var(--bg);color:var(--muted)}
+.banner b{font-weight:700}
+.outcome{border-radius:10px;padding:10px 12px;margin-top:12px;font-weight:600}
+.outcome.go{background:var(--accent-soft);color:var(--accent)}
+.outcome.stop{background:var(--warn-soft);color:var(--warn)}
+.outcome.info{background:var(--blue-soft);color:var(--blue)}
+.path{border-left:3px solid var(--line);padding-left:12px;display:flex;flex-direction:column;gap:12px}
+.path h3{margin:0;font-size:13px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.saved{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.saved li{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:13px}
+.saved li .t{flex:1;min-width:0}
+.saved li .t small{display:block;color:var(--muted)}
+.saved li button{padding:3px 8px;font-size:12px}
+.muted{color:var(--muted);font-size:12.5px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:20;padding:20px}
+.modal.on{display:flex}
+.modal .box{background:var(--card);border-radius:12px;padding:18px;max-width:560px;width:100%;max-height:80vh;display:flex;flex-direction:column;gap:10px}
+.modal textarea{flex:1;min-height:300px;font-size:12.5px;font-family:ui-monospace,Menlo,monospace}
+.drop{border:1.5px dashed var(--line);border-radius:9px;padding:12px;text-align:center;color:var(--muted);font-size:12.5px;cursor:pointer;outline:none}
+.drop:focus,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.thumbs div{position:relative}
+.thumbs img{width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+.thumbs button{position:absolute;top:-6px;right:-6px;padding:0 5px;font-size:11px;border-radius:50%;line-height:16px}
+details.card summary{cursor:pointer;list-style:none}
+details.card summary::-webkit-details-marker{display:none}
+details.card summary h2{margin:0}
+details.card[open] summary h2{margin-bottom:12px}
+.secclear{margin-left:auto;padding:2px 9px;font-size:11.5px;text-transform:none;letter-spacing:0;font-weight:500}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--card);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:30}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="application/json" id="saveddata">[]</script>
+<script id="app">
+(function(){
+"use strict";
+var $=function(s,r){return (r||document).querySelector(s)};
+var esc=function(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})};
+var LS={get:function(k){try{return localStorage.getItem(k)}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+
+/* ---------- PI Sheet definition ---------- */
+var SECTIONS=[
+ {id:"lead",title:"Lead information"},
+ {id:"debt",title:"Debt on the property"},
+ {id:"offer",title:"Offer script (BOFSLO)"},
+ {id:"mot",title:"Motivation & condition"},
+ {id:"desc",title:"Property description"},
+ {id:"notes",title:"Notes"}
+];
+function yes(k){return S.v[k]==="yes"} function no(k){return S.v[k]==="no"}
+var F=[
+ {id:"source",sec:"lead",label:"Source",type:"text",ask:false,hint:"Zillow, Facebook Marketplace, referral…"},
+ {id:"listingUrl",sec:"lead",label:"Listing link",type:"text",ask:false,wide:true},
+ {id:"ownerName",sec:"lead",label:"Owner's name",type:"text",say:"Can I get your full name?"},
+ {id:"phone",sec:"lead",label:"Property Owner",type:"tel",ask:false,hint:"Owner's phone number (from “Listed by: Property Owner” on the listing)"},
+ {id:"address",sec:"lead",label:"Address",type:"text",say:"What's the property address?"},
+ {id:"city",sec:"lead",label:"City",type:"text"},
+ {id:"state",sec:"lead",label:"State",type:"text"},
+ {id:"zip",sec:"lead",label:"ZIP",type:"text"},
+ {id:"email",sec:"lead",label:"Email",type:"email",say:"And your email?"},
+ {id:"listPrice",sec:"lead",label:"Listing price (on site)",type:"money",ask:false,hint:"Filled from the listing"},
+ {id:"askingPrice",sec:"lead",label:"Seller's asking price",type:"money",say:"What are you asking for the house?",hint:"What the seller tells you on the call"},
+ {id:"appraise",sec:"lead",label:"Seller's appraisal estimate",type:"money",say:"What do you think it would appraise for?"},
+ {id:"comps",sec:"lead",label:"Your comps",type:"text",ask:false,hint:"Your own number — not asked"},
+
+ {id:"hasDebt",sec:"debt",label:"Debt on the property?",type:"yn",say:"Do you still have a debt on the property?"},
+ {id:"loanBalance",sec:"debt",label:"Loan balance",type:"money",say:"OK, great! About how much do you owe?",show:function(){return yes("hasDebt")}},
+ {id:"payment",sec:"debt",label:"Monthly payment",type:"money",say:"About how much are your payments?",show:function(){return yes("hasDebt")}},
+ {id:"piti",sec:"debt",label:"Payment is PITI?",type:"yn",say:"Does that payment include taxes and insurance?",show:function(){return yes("hasDebt")}},
+ {id:"current",sec:"debt",label:"Payment current?",type:"yn",say:"Are the payments current?",show:function(){return yes("hasDebt")}},
+ {id:"arrears",sec:"debt",label:"Amount in arrears",type:"money",say:"About how far behind are you?",show:function(){return yes("hasDebt")&&no("current")}},
+
+ {id:"sellForOwed",sec:"offer",path:"A",label:"Sell for what you owe?",type:"yn",say:"Will you sell your house for what you owe on it?",show:function(){return path()==="A"}},
+ {id:"leastForEquity",sec:"offer",path:"A",label:"Least they'd accept for equity",type:"money",say:"If we take over your debt and pay all closing costs, what's the least you could accept for your equity?",show:function(){return path()==="A"&&no("sellForOwed")}},
+ {id:"takePayments",sec:"offer",path:"B",label:"Open to monthly payments?",type:"yn",say:"If we can pay a great price and close whenever you want and pay all closing costs, are you in a position to take monthly payments until we pay you off in full?",show:function(){return path()==="B"}},
+ {id:"cashOnly",sec:"offer",path:"B",label:"All cash now only?",type:"yn",say:"So you're saying the only way you will sell is if you get all cash now?",show:function(){return path()==="B"&&no("takePayments")}},
+ {id:"hearImmediately",sec:"offer",path:"B",label:"Want to hear how we buy immediately?",type:"yn",say:"So you are saying you would like to hear how we can buy your house immediately?",show:function(){return path()==="B"&&no("takePayments")&&no("cashOnly")}},
+ {id:"callbackTime",sec:"offer",label:"Best time for the boss to call",type:"text",say:"OK, I'll have my boss call you. What's the best time?",show:function(){return outcome().k==="go"},wide:true},
+
+ {id:"howArrived",sec:"mot",label:"How they arrived at asking price",type:"text",say:"How did you arrive at your asking price?",wide:true},
+ {id:"reason",sec:"mot",label:"Reason for selling",type:"text",say:"What's got you thinking about selling?",wide:true},
+ {id:"repairs",sec:"mot",label:"Needs repairs?",type:"yn",say:"Does it need any repairs?"},
+ {id:"repairAmt",sec:"mot",label:"Approx. repair amount",type:"money",say:"About how much would those run?",show:function(){return yes("repairs")}},
+ {id:"occupancy",sec:"mot",label:"Vacant or occupied",type:"choice",opts:["Vacant","Occupied"],say:"Is anyone living there right now?"},
+ {id:"whenMove",sec:"mot",label:"When they want to move",type:"text",say:"When do you want to move?"},
+ {id:"listed",sec:"mot",label:"Listed with an agent?",type:"yn",say:"Is the house listed?"},
+
+ {id:"propertyType",sec:"desc",label:"Property type",type:"choice",opts:["Single-Family","Multi-Family","Condo","Duplex","Commercial","Other"],ask:false,wide:true},
+ {id:"beds",sec:"desc",label:"Bedrooms",type:"text",say:"How many bedrooms?"},
+ {id:"baths",sec:"desc",label:"Bathrooms",type:"text",say:"How many bathrooms?"},
+ {id:"sqft",sec:"desc",label:"Square feet",type:"text",say:"About how many square feet?"},
+ {id:"lot",sec:"desc",label:"Lot size",type:"text",say:"How big is the lot?"},
+ {id:"construction",sec:"desc",label:"Construction",type:"choice",opts:["Frame","Brick","Block","Stucco","Other"],say:"Is it frame, brick, block or stucco?"},
+ {id:"constructionOther",sec:"desc",label:"Other construction",type:"text",show:function(){return S.v.construction==="Other"}},
+ {id:"garage",sec:"desc",label:"Garage",type:"text",say:"Is there a garage? How many cars?"},
+ {id:"amenities",sec:"desc",label:"Amenities",type:"checks",opts:["Carport","Basement","Refrigerator","Range","Dishwasher"],ask:false,wide:true},
+ {id:"description",sec:"desc",label:"Description",type:"textarea",ask:false,wide:true},
+ {id:"listingNotes",sec:"desc",label:"Listing details (year built, days on market, Zestimate, HOA…)",type:"textarea",ask:false,wide:true},
+ {id:"notes",sec:"notes",label:"Notes",type:"textarea",ask:false,wide:true}
+];
+var FMAP={};F.forEach(function(f){FMAP[f.id]=f});
+
+/* ---------- state ---------- */
+var S;
+function blank(){return {id:"c"+Date.now().toString(36),v:{date:today(),amenities:[]},ai:{},ev:{},manual:{},transcript:""}}
+function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+S=blank();
+try{var draft=JSON.parse(LS.get("pi_draft")||"null");if(draft&&draft.v)S=draft}catch(e){}
+var SAVED=[];try{SAVED=JSON.parse($("#saveddata").textContent)||[]}catch(e){SAVED=[]}
+function persist(){LS.set("pi_draft",JSON.stringify(S))}
+
+function num(x){if(x==null||x==="")return null;var n=parseFloat(String(x).replace(/[^0-9.\-]/g,""));return isNaN(n)?null:n}
+function money(x){var n=num(x);return n==null?"":"$"+Math.round(n).toLocaleString()}
+function askBasis(){var a=num(S.v.askingPrice);if(a!=null)return {n:a,lbl:"asking"};var l=num(S.v.listPrice);return l!=null?{n:l,lbl:"listing price"}:null}
+function path(){
+ if(!S.v.hasDebt)return null;
+ if(no("hasDebt"))return "B";
+ var ab=askBasis(),a=ab&&ab.n,b=num(S.v.loanBalance);
+ if(a==null||b==null)return null;
+ return Math.abs(a-b)<=35000?"A":"B";
+}
+function outcome(){
+ var p=path();
+ if(p==="A"){if(yes("sellForOwed"))return {k:"go",t:"Seller will sell for what's owed: set the callback with your boss."};
+  if(no("sellForOwed"))return S.v.leastForEquity?{k:"info",t:"Equity ask recorded ("+money(S.v.leastForEquity)+"). Pass to your boss with the debt details."}:{k:"",t:""};}
+ if(p==="B"){if(yes("takePayments"))return {k:"go",t:"Open to monthly payments: have your boss call to discuss terms."};
+  if(yes("cashOnly"))return {k:"stop",t:"Cash only: “OK, I understand but that won't work for us. Thanks.” Stop here."};
+  if(yes("hearImmediately"))return {k:"go",t:"Wants to hear how we can buy immediately: have your boss call."};
+  if(no("hearImmediately"))return {k:"stop",t:"Not interested: thank them and end the call."};}
+ return {k:"",t:""};
+}
+function visible(f){return !f.show||f.show()}
+function filled(f){var v=S.v[f.id];return f.type==="checks"?(v&&v.length):(v!=null&&String(v).trim()!=="")}
+
+/* ---------- render ---------- */
+function shell(){
+ $("#root").innerHTML=
+ '<header><h1>PI Sheet <span>Call Assistant</span></h1><div class="meta">'+
+ '<button id="install" class="primary" style="display:none">Install app</button><button id="clearall">Clear all</button><label>Name <input type="text" id="student" placeholder="Caller name"></label>'+
+ '<label>Date <input type="date" id="date"></label></div></header>'+
+ '<div class="wrap"><aside class="side">'+
+  '<details class="card" id="importcard" open><summary><h2>Import from a listing</h2></summary>'+
+   '<input type="text" id="lurl" placeholder="Paste the Zillow / Facebook / Redfin link">'+
+   '<textarea id="ltext" rows="4" style="margin-top:8px;font-size:12.5px" placeholder="Paste the listing text here: on the listing press Ctrl+A, then Ctrl+C, then paste. Everything fills in automatically, including the Property Owner phone."></textarea>'+
+   '<div class="drop" id="ldrop" tabindex="0" style="margin-top:8px">Screenshots: attach for your own reference (they aren’t read automatically)</div>'+
+   '<input type="file" id="lfile" accept="image/*" multiple style="display:none">'+
+   '<div class="thumbs" id="lthumbs"></div>'+
+   '<div class="row"><button class="primary" id="lgo">Fill again</button><button id="lclear">Clear</button></div>'+
+   '<div class="status" id="lstatus">Paste the link, then copy the listing page text (Ctrl+A, Ctrl+C) into the box. Price, beds, baths, sq ft, address and the Property Owner phone fill in automatically.</div>'+
+  '</details>'+
+  '<div class="card"><h2>Live call</h2>'+
+   '<button class="mic primary" id="mic" disabled><span class="dot"></span><span id="micl">Connecting…</span></button>'+
+   '<div class="status" id="micstatus"></div>'+
+   '<div class="row" style="display:none"><button id="fill">Auto-fill</button><label class="muted"><input type="checkbox" id="autofill"></label></div>'+
+   '<div class="status" id="fillstatus"></div>'+
+   '<div style="margin-top:10px"><textarea id="transcript" placeholder="The live transcript appears here while you listen. You can also type or paste call notes. It is saved with the call."></textarea>'+
+   '<div class="interim" id="interim"></div></div>'+
+  '</div>'+
+  '<div class="card next" id="nextcard"></div>'+
+  '<div class="card"><h2>Finish</h2><div class="actions">'+
+   '<button class="primary" id="save">Save to call log</button><button id="copy">Copy summary</button><button id="newcall">Clear all</button></div>'+'<div class="actions" style="margin-top:8px"><button id="exportcsv">Download call log (Excel/CSV)</button><button id="backup">Back up</button><button id="restore">Restore</button><input type="file" id="restorefile" accept=".json,application/json" style="display:none"></div>'+'<div class="muted" style="margin-top:6px">Calls are saved on this device and browser only. Download or back up to move them.</div>'+
+   '<div class="status" id="savestatus"></div>'+
+   '<div id="crmbox" style="display:none;margin-top:14px"><h2>Send to CRM</h2>'+
+    '<label class="muted" style="display:block;margin-bottom:6px">Sellers Pipeline stage</label>'+
+    '<select id="crmstage" style="width:100%;font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink)"></select>'+
+    '<div class="row"><button class="primary" id="crmsend">Send to CRM</button></div>'+
+    '<div class="status" id="crmstatus"></div></div>'+
+   '<h2 style="margin-top:14px">Call log <span class="n" id="savedn">0</span></h2><ul class="saved" id="saved"></ul></div>'+
+ '</aside><main class="sheet" id="sheet"></main></div>'+
+ '<div class="modal" id="modal"><div class="box"><b>Call summary</b><span class="muted">Copy this into your CRM notes.</span><textarea id="modaltext" readonly></textarea><div class="actions"><button class="primary" id="modalcopy">Copy</button><button id="modalclose">Close</button></div></div></div>'+
+ '<div class="toast" id="toast"></div>';
+ var st=$("#student");st.value=LS.get("pi_student")||"";st.oninput=function(){LS.set("pi_student",st.value)};
+ var dt=$("#date");dt.value=S.v.date||today();dt.onchange=function(){S.v.date=dt.value;persist()};
+ var tr=$("#transcript");tr.value=S.transcript||"";tr.oninput=function(){S.transcript=tr.value;persist()};
+}
+
+function fieldHTML(f){
+ var v=S.v[f.id],h='';
+ if(f.type==="money")h='<div class="money"><input type="text" inputmode="decimal" data-f="'+f.id+'" value="'+esc(v||"")+'"></div>';
+ else if(f.type==="yn")h='<div class="seg" data-seg="'+f.id+'"><button data-val="yes" class="'+(v==="yes"?"on":"")+'">Yes</button><button data-val="no" class="'+(v==="no"?"on":"")+'">No</button></div>';
+ else if(f.type==="choice")h='<div class="seg" data-seg="'+f.id+'">'+f.opts.map(function(o){return '<button data-val="'+o+'" class="'+(v===o?"on":"")+'">'+o+'</button>'}).join("")+'</div>';
+ else if(f.type==="checks")h='<div class="checks" data-checks="'+f.id+'">'+f.opts.map(function(o){return '<button data-val="'+o+'" class="'+((v||[]).indexOf(o)>-1?"on":"")+'">'+o+'</button>'}).join("")+'</div>';
+ else if(f.type==="textarea")h='<textarea rows="3" data-f="'+f.id+'">'+esc(v||"")+'</textarea>';
+ else h='<input type="'+(f.type==="tel"?"tel":f.type==="email"?"email":"text")+'" data-f="'+f.id+'" value="'+esc(v||"")+'">';
+ return '<div class="q'+(f.wide?" wide":"")+(S.ai[f.id]?" ai":"")+'" id="q_'+f.id+'">'+
+  '<label class="l">'+esc(f.label)+(function(){var lst=S.ai[f.id]==="listing";return '<span class="tag" title="'+esc(S.ev[f.id]?(lst?"Listing says: ":"Heard: ")+"“"+S.ev[f.id]+"”":(lst?"Filled from the listing":"Filled from the call"))+'">'+(lst?"from listing":"from call")+'</span>'})()+'</label>'+
+  (f.say?'<div class="s">“'+esc(f.say)+'”</div>':'')+(f.hint?'<div class="muted">'+esc(f.hint)+'</div>':'')+h+'</div>';
+}
+
+function renderSheet(){
+ var focusId=document.activeElement&&document.activeElement.getAttribute("data-f"),selS,selE;
+ if(focusId){selS=document.activeElement.selectionStart;selE=document.activeElement.selectionEnd}
+ var html="";
+ SECTIONS.forEach(function(sec,i){
+  var fs=F.filter(function(f){return f.sec===sec.id&&visible(f)});
+  html+='<section class="card"><h2><span class="n">'+(i+1)+'</span>'+sec.title+'<button class="secclear" data-clear="'+sec.id+'">Clear</button></h2>';
+  if(sec.id==="offer"){
+   var p=path(),ab=askBasis(),a=ab&&ab.n,al=ab?ab.lbl:"asking",b=num(S.v.loanBalance);
+   if(p==="A")html+='<div class="banner a"><b>Path A</b>: '+al+' '+money(a)+' vs. owed '+money(b)+' (spread '+money(Math.abs(a-b))+', within $35,000).'+(al!=="asking"?' <i>Using the listing price until the seller gives their asking price.</i>':'')+'</div>';
+   else if(p==="B")html+='<div class="banner b"><b>Path B</b>: '+(no("hasDebt")?"no debt on the property.":al+" "+money(a)+" vs. owed "+money(b)+" (spread "+money(Math.abs(a-b))+", more than $35,000)."+(al!=="asking"?" <i>Using the listing price until the seller gives their asking price.</i>":""))+'</div>';
+   else html+='<div class="banner wait">Get the asking price and the debt answer first. The sheet picks Path A or B for you.</div>';
+   var pa=fs.filter(function(f){return f.path}),rest=fs.filter(function(f){return !f.path});
+   if(pa.length)html+='<div class="path">'+pa.map(fieldHTML).join("")+'</div>';
+   var o=outcome();if(o.t)html+='<div class="outcome '+o.k+'">'+esc(o.t)+'</div>';
+   if(rest.length)html+='<div class="grid" style="margin-top:12px">'+rest.map(fieldHTML).join("")+'</div>';
+  }else html+='<div class="grid">'+fs.map(fieldHTML).join("")+'</div>';
+  html+='</section>';
+ });
+ $("#sheet").innerHTML=html;
+ if(focusId){var el=$('[data-f="'+focusId+'"]');if(el){el.focus();try{el.setSelectionRange(selS,selE)}catch(e){}}}
+ renderNext();
+ if(typeof mcp!=="undefined"&&mcp){var sel=$("#crmstage");if(sel&&!stagePicked)sel.value=(S.crm&&S.crm.stage)||suggestedStage();crmStatusIdle()}
+}
+
+function nextField(){
+ if(outcome().k==="stop")return null;
+ for(var i=0;i<F.length;i++){var f=F[i];if(f.ask===false||!f.say)continue;if(visible(f)&&!filled(f))return f}
+ return null;
+}
+function renderNext(){
+ document.querySelectorAll(".q.current").forEach(function(e){e.classList.remove("current")});
+ var f=nextField(),c=$("#nextcard");
+ if(!f){c.innerHTML='<h2>Next to ask</h2><div class="done">'+(outcome().k==="stop"?"Script ended. Wrap up the call.":"All script questions answered.")+'</div>';return}
+ var q=$("#q_"+f.id);if(q)q.classList.add("current");
+ c.innerHTML='<h2>Next to ask</h2><div class="say">“'+esc(f.say)+'”</div><div class="muted" style="margin-top:6px">'+esc(f.label)+' · <a href="#" id="jump">jump to it</a></div>';
+ $("#jump").onclick=function(e){e.preventDefault();var q=$("#q_"+f.id);if(q)q.scrollIntoView({behavior:"smooth",block:"center"})};
+}
+
+function setVal(id,val,byAI,ev){
+ S.v[id]=val;
+ if(byAI){S.ai[id]=byAI===true?"call":byAI;if(ev)S.ev[id]=ev;else delete S.ev[id]}else{S.manual[id]=true;delete S.ai[id];delete S.ev[id]}
+}
+function wire(){
+ var sheet=$("#sheet");
+ sheet.addEventListener("input",function(e){var id=e.target.getAttribute("data-f");if(!id)return;
+  var wasAI=S.ai[id];setVal(id,e.target.value,false);persist();
+  var f=FMAP[id];
+  if(wasAI){var q=$("#q_"+id);if(q)q.classList.remove("ai")}
+  if(id==="askingPrice"||id==="listPrice"||id==="loanBalance"||id==="leastForEquity")debounceRender();else renderNext();});
+ sheet.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;
+  var cs=b.getAttribute("data-clear");
+  if(cs){var ids=F.filter(function(f){return f.sec===cs}).map(function(f){return f.id});
+   var has=ids.some(function(k){var v=S.v[k];return Array.isArray(v)?v.length:(v!=null&&String(v).trim()!=="")});
+   if(!has){toast("Nothing to clear here");return}
+   if(!b.dataset.confirm){b.dataset.confirm="1";b.textContent="Click again to clear";b.classList.add("rec");setTimeout(function(){if(b.isConnected){delete b.dataset.confirm;b.textContent="Clear";b.classList.remove("rec")}},3000);return}
+   ids.forEach(function(k){if(k==="amenities")S.v[k]=[];else delete S.v[k];delete S.ai[k];delete S.ev[k];delete S.manual[k]});
+   if(cs==="lead")S.v.date=$("#date").value||today();
+   persist();renderSheet();toast("Section cleared");return}
+  var seg=b.parentElement.getAttribute("data-seg"),chk=b.parentElement.getAttribute("data-checks"),val=b.getAttribute("data-val");
+  if(seg){setVal(seg,S.v[seg]===val?"":val,false)}
+  else if(chk){var a=(S.v[chk]||[]).slice(),i=a.indexOf(val);if(i>-1)a.splice(i,1);else a.push(val);setVal(chk,a,false)}
+  else return;
+  persist();renderSheet();});
+ $("#fill").onclick=function(){runFill(true)};
+ $("#copy").onclick=function(){$("#modaltext").value=summary();$("#modal").classList.add("on")};
+ $("#modalclose").onclick=function(){$("#modal").classList.remove("on")};
+ $("#modalcopy").onclick=function(){var t=$("#modaltext");try{navigator.clipboard.writeText(t.value).then(function(){toast("Copied")},function(){t.select();toast("Press Ctrl+C to copy")})}catch(e){t.select();toast("Press Ctrl+C to copy")}};
+ function clearAll(btn,label){
+  var has=Object.keys(S.v).some(function(k){return k!=="date"&&k!=="amenities"&&S.v[k]&&String(S.v[k]).length})||(S.transcript||"").trim()||$("#lurl").value||$("#ltext").value||LIMG.length;
+  if(has&&!btn.dataset.confirm){btn.dataset.confirm="1";btn.textContent="Click again to clear";btn.classList.add("rec");setTimeout(function(){delete btn.dataset.confirm;btn.textContent=label;btn.classList.remove("rec")},3000);return}
+  delete btn.dataset.confirm;btn.textContent=label;btn.classList.remove("rec");
+  if(listening&&dict){dict.stop().catch(function(){})}
+  S=blank();stagePicked=false;lastFillLen=0;persist();
+  $("#transcript").value="";$("#date").value=S.v.date;$("#interim").textContent="";
+  $("#lurl").value="";$("#ltext").value="";LIMG=[];renderThumbs();$("#lstatus").className="status";$("#lstatus").textContent="";
+  $("#fillstatus").textContent="";$("#savestatus").textContent="";
+  renderSheet();window.scrollTo(0,0);toast("Cleared. Ready for the next call");
+ }
+ $("#clearall").onclick=function(){clearAll(this,"Clear all")};
+ $("#newcall").onclick=function(){clearAll(this,"Clear all")};
+ $("#save").onclick=saveCall;
+}
+var rt;function debounceRender(){clearTimeout(rt);rt=setTimeout(renderSheet,500)}
+function toast(t){var e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(e._t);e._t=setTimeout(function(){e.classList.remove("on")},1800)}
+
+/* ---------- summary ---------- */
+function disp(f){var v=S.v[f.id];if(f.type==="money")return money(v);if(f.type==="yn")return v==="yes"?"Yes":v==="no"?"No":"";if(f.type==="checks")return (v||[]).join(", ");return v||""}
+function summary(){
+ var L=["PROPERTY INFORMATION SHEET","Student: "+(LS.get("pi_student")||"")+"   Date: "+(S.v.date||"")];
+ var p=path();
+ SECTIONS.forEach(function(sec){
+  var lines=F.filter(function(f){return f.sec===sec.id&&visible(f)&&filled(f)}).map(function(f){return "- "+f.label+": "+disp(f)});
+  if(sec.id==="offer"){if(p)lines.unshift("- Path "+p+(p==="A"?" (asking within $35k of balance)":""));var o=outcome();if(o.t)lines.push("- Outcome: "+o.t)}
+  if(lines.length){L.push("");L.push(sec.title.toUpperCase());L=L.concat(lines)}
+ });
+ return L.join("\n");
+}
+
+/* ---------- capabilities (plain browser, no account needed) ---------- */
+function makeDictation(){
+ var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR)return null;
+ var rec=null,cb={p:function(){},f:function(){},s:function(){}},want=false,cur="stopped";
+ function make(){
+  rec=new SR();rec.continuous=true;rec.interimResults=true;rec.lang=navigator.language||"en-US";
+  rec.onresult=function(e){var interim="";for(var i=e.resultIndex;i<e.results.length;i++){var r=e.results[i];if(r.isFinal)cb.f({text:r[0].transcript});else interim+=r[0].transcript}cb.p({text:interim})};
+  rec.onerror=function(e){if(e.error==="not-allowed"||e.error==="service-not-allowed"){want=false;cur="stopped";cb.s({state:"stopped",reason:"Microphone blocked - allow it in the browser's site settings"})}};
+  rec.onend=function(){if(want){try{rec.start();return}catch(err){}}cur="stopped";cb.s({state:"stopped",reason:want?"ended":"stopped"});want=false};
+  rec.onstart=function(){cur="listening";cb.s({state:"listening"})};
+ }
+ return {
+  onPartial:function(f){cb.p=f},onFinal:function(f){cb.f=f},onState:function(f){cb.s=f},
+  start:function(){return new Promise(function(res,rej){try{if(!rec)make();want=true;rec.start();res()}catch(e){rej({code:e.message||"error"})}})},
+  stop:function(){want=false;try{rec&&rec.stop()}catch(e){}return Promise.resolve()}
+ };
+}
+var dict=null,sample=null,artifactCap=null,listening=false;
+
+function micUI(){var b=$("#mic");
+ if(!dict){b.disabled=true;$("#micl").textContent="Voice not supported in this browser";return}
+ b.disabled=false;b.className="mic "+(listening?"rec":"primary");$("#micl").textContent=listening?"Stop listening":"Start listening";}
+function setupDictation(d){
+ dict=d;micUI();
+ if(!d){$("#micstatus").textContent="Live transcription works in Chrome, Edge and Safari. In other browsers, type notes below.";return}
+ $("#micstatus").textContent="To capture both sides, put the call on speaker or route PC audio into your mic.";
+ d.onPartial(function(x){$("#interim").textContent=x.text||""});
+ d.onFinal(function(x){if(!x.text)return;queueFill();var tr=$("#transcript");tr.value=(tr.value?tr.value.replace(/\s*$/," "):"")+x.text.trim();S.transcript=tr.value;persist();$("#interim").textContent="";tr.scrollTop=tr.scrollHeight});
+ d.onState(function(x){listening=x.state==="listening";micUI();
+  if(!listening){$("#interim").textContent="";if(x.reason&&x.reason!=="stopped"&&x.reason!=="viewer_stopped")$("#micstatus").textContent="Listening paused ("+x.reason+"). Click Start to resume.";
+   if($("#autofill").checked&&S.transcript.length>lastFillLen+20)runFill(false)}
+  else $("#micstatus").textContent="Listening… the transcript is saved with the call. Click the answers on the sheet as you go."});
+ $("#mic").onclick=function(){
+  if(listening){d.stop().catch(function(){});return}
+  d.start().catch(function(err){var c=err&&(err.code||err.message||err);
+   if(c==="not_granted"||/not-allowed/.test(c)){$("#micstatus").textContent="Microphone access was declined. Paste a transcript instead.";dict=null;micUI()}
+   else $("#micstatus").textContent="Couldn't start listening ("+c+"). Try again.";});
+ };
+}
+
+/* ---------- auto-fill with Claude ---------- */
+var filling=false,lastFillLen=0,backoffUntil=0;
+function schema(ids){return F.filter(function(f){return ids?ids.indexOf(f.id)>-1:(["comps","source","listingUrl","listingNotes","listPrice"].indexOf(f.id)<0)}).map(function(f){
+ var t=f.type==="money"?"number (dollars, no $ or commas)":f.type==="yn"?'"yes" or "no"':f.type==="choice"?"one of "+JSON.stringify(f.opts):f.type==="checks"?"array, any of "+JSON.stringify(f.opts):"string";
+ return '  "'+f.id+'": '+t+" — "+f.label+(f.say?' (asked as: "'+f.say+'")':"")}).join("\n")}
+function runFill(manual){
+ var tr=(S.transcript||"").trim();
+ if(!sample){$("#fillstatus").textContent="Auto-fill isn't available in this view.";return}
+ if(!tr){if(manual)$("#fillstatus").textContent="Nothing to read yet. Start listening or paste a transcript.";return}
+ if(filling)return;
+ if(Date.now()<backoffUntil){if(manual)$("#fillstatus").textContent="Busy. Try again in a moment.";return}
+ filling=true;var snapLen=tr.length;$("#fill").disabled=true;$("#fillstatus").className="status";$("#fillstatus").textContent="Reading the call…";
+ var current={};F.forEach(function(f){if(filled(f))current[f.id]=S.v[f.id]});
+ var prompt="You fill in a real-estate investor's \"Property Information Sheet\" from a phone call with a home seller. The investor buys on owner-finance terms (BOFSLO). The transcript is speech-to-text of both speakers mixed together with no speaker labels and may contain recognition errors; the investor asks the questions and the seller answers.\n\n"+
+ "Return ONLY a JSON object: {\"fields\": {...}, \"evidence\": {...}}.\n"+
+ "- \"fields\": include a key ONLY when the SELLER clearly gave that answer in the transcript. Never guess or infer missing values. Leave out anything not stated.\n"+
+ "- \"evidence\": for each key in fields, a short snippet (under 12 words) from the transcript that supports it.\n"+
+ "- Spoken numbers become digits (\"one twenty-five\" for a price = 125000; \"about eleven hundred a month\" = 1100).\n"+
+ "- \"notes\": a few short bullet-style sentences of anything else useful the seller said (motivation, timeline, condition, people involved) that has no other field. Omit if nothing.\n"+
+ "- \"description\": a one or two sentence description of the house if the seller described it. Omit otherwise.\n\n"+
+ "Field keys and types:\n"+schema()+"\n\nValues already on the sheet (update one only if the seller clearly corrected it):\n"+JSON.stringify(current)+"\n\nTranscript:\n\"\"\"\n"+tr.slice(-24000)+"\n\"\"\"";
+ sample.json(prompt,{modelTier:"default"}).then(function(res){
+  var fields=(res&&res.fields)||{},ev=(res&&res.evidence)||{},n=0;
+  Object.keys(fields).forEach(function(k){var f=FMAP[k];if(!f||S.manual[k])return;if(k==="description"&&S.ai[k]==="listing")return;var val=normVal(f,fields[k]);if(val==null)return;
+   if(JSON.stringify(S.v[k])===JSON.stringify(val))return;
+   setVal(k,val,"call",ev[k]?String(ev[k]):"");n++;});
+  lastFillLen=snapLen;persist();renderSheet();
+  $("#fillstatus").textContent=n?("Filled "+n+" answer"+(n>1?"s":"")+" from the call. Highlighted fields came from the call; check them."):"No new answers found yet.";
+ },function(err){
+  var c=err&&err.code;$("#fillstatus").className="status err";
+  if(c==="not_granted"){$("#fillstatus").textContent="Auto-fill was declined. You can fill the sheet by hand.";sample=null;$("#fill").style.display="none"}
+  else if(c==="rate_limited"){backoffUntil=Date.now()+60000;$("#fillstatus").textContent="Too many requests. Pausing auto-fill for a minute."}
+  else $("#fillstatus").textContent="Auto-fill hit a snag. Try again.";
+ }).then(function(){filling=false;$("#fill").disabled=false;if(listening&&(S.transcript||"").length-lastFillLen>=25)queueFill()});
+}
+function normVal(f,val){
+ if(val==null||val==="")return null;
+ if(f.type==="money"){var nn=num(val);if(nn==null)return null;return String(Math.round(nn))}
+ if(f.type==="yn"){var t=String(val).toLowerCase();return t.indexOf("y")===0?"yes":t.indexOf("n")===0?"no":null}
+ if(f.type==="choice"){var m=f.opts.filter(function(o){return o.toLowerCase()===String(val).toLowerCase()})[0];return m||null}
+ if(f.type==="checks"){if(!Array.isArray(val))return null;val=val.filter(function(x){return f.opts.indexOf(x)>-1});return val.length?val:null}
+ return String(val);
+}
+var fillTimer=null,lastFillAt=0;
+function queueFill(){
+ if(!$("#autofill").checked)return;
+ clearTimeout(fillTimer);
+ fillTimer=setTimeout(function tick(){
+  var grown=(S.transcript||"").length-lastFillLen;
+  if(grown<25)return;
+  if(filling||Date.now()-lastFillAt<8000){fillTimer=setTimeout(tick,3000);return}
+  lastFillAt=Date.now();runFill(false);
+ },3500);
+}
+setInterval(function(){if(listening&&$("#autofill").checked&&(S.transcript||"").length-lastFillLen>25&&!filling&&Date.now()-lastFillAt>20000){lastFillAt=Date.now();runFill(false)}},20000);
+
+/* ---------- import from a listing ---------- */
+var LIMG=[],imagesOK=false,lBusy=false;
+var LIST_IDS=["source","ownerName","phone","email","address","city","state","zip","listPrice","propertyType","beds","baths","sqft","lot","construction","garage","amenities","occupancy","listed","repairs","description","listingNotes"];
+function sourceFromUrl(u){u=(u||"").toLowerCase();return u.indexOf("zillow")>-1?"Zillow":(u.indexOf("facebook")>-1||u.indexOf("fb.com")>-1)?"Facebook Marketplace":u.indexOf("redfin")>-1?"Redfin":u.indexOf("realtor.com")>-1?"Realtor.com":u.indexOf("craigslist")>-1?"Craigslist":u.indexOf("propstream")>-1?"PropStream":""}
+function renderThumbs(){var t=$("#lthumbs");t.innerHTML="";LIMG.forEach(function(b,i){var d=document.createElement("div"),im=document.createElement("img"),x=document.createElement("button");im.src=URL.createObjectURL(b);x.textContent="×";x.title="Remove";x.onclick=function(){LIMG.splice(i,1);renderThumbs()};d.appendChild(im);d.appendChild(x);t.appendChild(d)})}
+function addImages(files){var added=0;Array.prototype.forEach.call(files||[],function(f){if(f&&f.type&&f.type.indexOf("image/")===0&&LIMG.length<4){LIMG.push(f);added++}});if(added){setTimeout(autoRun,300);if(!imagesOK){$("#lstatus").className="status";$("#lstatus").textContent="Screenshot attached for reference. To auto-fill, paste the listing text too."}renderThumbs()}return added}
+function wireListing(){
+ var dz=$("#ldrop"),fi=$("#lfile");
+ dz.onclick=function(){fi.click()};dz.onkeydown=function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();fi.click()}};
+ fi.onchange=function(){addImages(fi.files);fi.value=""};
+ dz.addEventListener("dragover",function(e){e.preventDefault();dz.classList.add("over")});
+ dz.addEventListener("dragleave",function(){dz.classList.remove("over")});
+ dz.addEventListener("drop",function(e){e.preventDefault();dz.classList.remove("over");addImages(e.dataTransfer&&e.dataTransfer.files)});
+ $("#importcard").addEventListener("paste",function(e){var it=(e.clipboardData&&e.clipboardData.items)||[],fs=[];for(var i=0;i<it.length;i++){if(it[i].kind==="file"){var f=it[i].getAsFile();if(f)fs.push(f)}}if(fs.length&&addImages(fs))e.preventDefault()});
+ $("#lclear").onclick=function(){$("#lurl").value="";$("#ltext").value="";LIMG=[];renderThumbs();$("#lstatus").className="status";$("#lstatus").textContent=""};
+ $("#lgo").onclick=runListing;
+ var lt;$("#ltext").addEventListener("input",function(){clearTimeout(lt);var v=this.value;lt=setTimeout(function(){autoOwnerPhone(v,false);autoRun()},700)});
+ $("#lurl").addEventListener("input",function(){var v=this.value;
+  if(v.length>300||/\n/.test(v)||(v.length>60&&/\s\S+\s/.test(v.trim()))){var u=(v.match(/https?:\/\/[^\s"<>]+/)||[""])[0];this.value=u;var t=$("#ltext");t.value=(t.value?t.value+"\n":"")+v;t.dispatchEvent(new Event("input"))}
+  else{clearTimeout(lt);lt=setTimeout(function(){var u=$("#lurl").value.trim();if(/^https?:\/\//.test(u)&&!$("#ltext").value.trim()&&!LIMG.length)linkOnlyHelp(u)},600)}});
+}
+var PHONE_RE=/(\+?1[\s.\-]?)?\(?(\d{3})\)?[\s.\-]*(\d{3})[\s.\-]*(\d{4})(?!\d)/;
+function fmtPhone(p){return "("+p[2]+") "+p[3]+"-"+p[4]}
+function ownerPhoneFromText(txt){
+ if(!txt)return null;
+ var re=/property\s+owner/ig,m;
+ while((m=re.exec(txt))){
+  var after=txt.slice(m.index+m[0].length,m.index+m[0].length+300),p=after.match(PHONE_RE);
+  if(p)return {phone:fmtPhone(p),ev:(m[0]+" "+p[0]).replace(/\s+/g," ").trim()};
+ }
+ if(/for\s+sale\s+by\s+owner|\bFSBO\b|listed\s+by:?\s*(the\s+)?owner/i.test(txt)){
+  var all=[],g=new RegExp(PHONE_RE.source,"g"),q;while((q=g.exec(txt))){var f=fmtPhone(q);if(all.indexOf(f)<0)all.push(f)}
+  if(all.length===1)return {phone:all[0],ev:"For sale by owner – "+all[0]};
+ }
+ return null;
+}
+function autoOwnerPhone(txt,quiet){
+ var r=ownerPhoneFromText(txt);
+ if(!r)return false;
+ if(S.manual.phone&&S.v.phone)return false;
+ if(S.v.phone===r.phone)return true;
+ setVal("phone",r.phone,"listing",r.ev);
+ if(!S.manual.listed&&!S.v.listed)setVal("listed","no","listing","Listed by: Property Owner");
+ persist();renderSheet();
+ if(!quiet)toast("Property Owner phone filled: "+r.phone);
+ return true;
+}
+var lastRunSig="";
+function autoRun(){var sig=$("#ltext").value.trim().length+"|"+LIMG.length;if(sig===lastRunSig||(!$("#ltext").value.trim()&&!LIMG.length))return;if(lBusy)return;lastRunSig=sig;runListing()}
+function linkOnlyHelp(u){var src=sourceFromUrl(u)||"That site";setVal("listingUrl",u,false);if(sourceFromUrl(u)&&!S.v.source)setVal("source",sourceFromUrl(u),"listing");persist();renderSheet();
+ var st=$("#lstatus");st.className="status err";st.textContent="Link saved. "+src+" won\u2019t let other sites open its pages, so on the listing press Ctrl+A, Ctrl+C and paste the text below. It fills in automatically.";}
+function localListing(txt){
+ var t=txt.replace(/ /g," "),out={},ev={};
+ function put(k,v,e){if(v!=null&&v!==""){out[k]=v;ev[k]=e||String(v)}}
+ var pr=t.match(/\$\s?(\d{1,3}(?:,\d{3})+|\d{4,7})(?!\s*\/\s*mo)/);if(pr)put("listPrice",pr[1].replace(/,/g,""),pr[0]);
+ var bd=t.match(/(\d+(?:\.\d)?)\s*(?:bd|beds?|bedrooms?)\b/i);if(bd)put("beds",bd[1],bd[0]);
+ var ba=t.match(/(\d+(?:\.\d)?)\s*(?:ba|baths?|bathrooms?)\b/i);if(ba)put("baths",ba[1],ba[0]);
+ var sq=t.match(/(\d{1,2},?\d{3}|\d{3,4})\s*(?:sq\.?\s*ft|sqft|square\s+feet)/i);if(sq)put("sqft",sq[1].replace(/,/g,""),sq[0]);
+ var lot=t.match(/([\d.,]+\s*(?:acres?|sq\.?\s*ft\.?)\s*lot|lot(?:\s+size)?:?\s*[\d.,]+\s*(?:acres?|sq\.?\s*ft\.?))/i);if(lot)put("lot",lot[1],lot[0]);
+ var ad=null,adre=/(?:^|[^\d,$])(\d{1,6}\s+[A-Za-z0-9 .'#-]{3,60}?),\s*([A-Za-z .'-]{2,40}),\s*([A-Z]{2})\s+(\d{5})/g,am;
+ while((am=adre.exec(t))){var st=am[1].replace(/^.*\b(?:sq\.?\s*ft|sqft|bd|ba|beds?|baths?)\b\s*/i,"");if(/^\d/.test(st)){am[1]=st;ad=am}}
+ if(ad){put("address",ad[1].trim(),ad[0]);put("city",ad[2].trim());put("state",ad[3]);put("zip",ad[4])}
+ var yb=t.match(/built\s+in\s+(\d{4})|year\s+built:?\s*(\d{4})/i),dom=t.match(/(\d+)\s+days?\s+on\s+(?:zillow|market|redfin)/i),ze=t.match(/zestimate[^$\d]{0,20}\$\s?([\d,]+)/i),hoa=t.match(/hoa[^$\d]{0,20}\$\s?([\d,]+)/i);
+ var notes=[];if(yb)notes.push("Built "+(yb[1]||yb[2]));if(dom)notes.push(dom[1]+" days on market");if(ze)notes.push("Zestimate $"+ze[1]);if(hoa)notes.push("HOA $"+hoa[1]);
+ if(notes.length)put("listingNotes",notes.join("\n"));
+ var ty=t.match(/\b(single[- ]family|multi[- ]family|condo|duplex|townhouse|townhome)\b/i);
+ if(ty){var m=ty[1].toLowerCase();put("propertyType",m.indexOf("single")>-1?"Single-Family":m.indexOf("multi")>-1?"Multi-Family":m==="duplex"?"Duplex":m.indexOf("condo")>-1||m.indexOf("town")>-1?"Condo":"Other",ty[0])}
+ if(/basement/i.test(t))put("amenities",["Basement"],"basement");
+ if(/for\s+sale\s+by\s+owner|listed\s+by:?\s*property\s+owner|\bFSBO\b/i.test(t))put("listed","no","for sale by owner");
+ if(/needs\s+work|fixer|as[- ]is|tlc|handyman/i.test(t))put("repairs","yes","needs work / as-is");
+ return {fields:out,evidence:ev};
+}
+function runListing(){
+ var url=$("#lurl").value.trim(),txt=$("#ltext").value.trim(),st=$("#lstatus");st.className="status";
+ if(url){var src=sourceFromUrl(url);setVal("listingUrl",url,false);if(src&&!S.v.source)setVal("source",src,"listing")}
+ var gotPhone=autoOwnerPhone(txt,true);
+ if(!txt&&!LIMG.length){persist();renderSheet();if(url)linkOnlyHelp(url);else st.textContent="Paste the listing text or a screenshot.";return}
+ if(!sample){var res=localListing(txt),n=0;Object.keys(res.fields).forEach(function(k){var f=FMAP[k];if(!f||(k==="phone"&&gotPhone))return;var val=normVal(f,res.fields[k]);if(val==null||S.manual[k])return;if(filled(f)&&S.ai[k]!=="listing")return;setVal(k,val,"listing",res.evidence[k]||"");n++});
+  persist();renderSheet();st.className="status";st.textContent=(gotPhone?"Property Owner phone filled. ":"")+(n?"Filled "+n+" field"+(n>1?"s":"")+" from the listing. Check them with the seller.":"Couldn’t find details in that text — make sure you copied the whole listing page.");return}
+ if(lBusy)return;lBusy=true;$("#lgo").disabled=true;st.textContent="Reading the listing…";
+ var prompt="You read a real-estate listing (Zillow, Facebook Marketplace, Redfin, Craigslist, etc.) and fill an investor's Property Information Sheet. The input is text copied from the listing page and/or screenshots of it. Page text may include menus, ads and other homes; use only the main listing.\n\n"+
+ "Return ONLY JSON: {\"fields\":{...},\"evidence\":{...}}.\n"+
+ "- Include a key only when the listing clearly shows it. Never guess.\n"+
+ "- evidence: for each field, a short snippet (under 12 words) from the listing.\n"+
+ "- listPrice: the price shown on the listing. It is NOT the seller's asking price from a call.\n"+
+ "- source: the site the listing is on, e.g. \"Zillow\" or \"Facebook Marketplace\".\n"+
+ "- phone: on Zillow for-sale-by-owner listings the owner's number appears in the \"Listed by:\" area right under \"Property Owner\" (e.g. \"Listed by: Property Owner (317) 555-0101\"). Always take that number as phone. On other sites use the owner's number if the owner (FSBO / Marketplace seller) shows one.\n"+
+ "- ownerName: the owner's actual name only if shown. \"Property Owner\" is a label, never a name.\n"+
+ "- Never fill ownerName, phone or email with a listing agent's or brokerage's details (\"Listed by: <agent name>, <brokerage>\").\n"+
+ "- listed: \"no\" when \"Listed by\" says Property Owner or the listing is for sale by owner; \"yes\" if listed by a real-estate agent/broker or on the MLS. Omit if unclear.\n"+
+ "- repairs: \"yes\" only if the listing says it needs work/is a fixer/sold as-is with issues; put details in description.\n"+
+ "- address is the street line only; city, state (2-letter), zip separately.\n"+
+ "- description: 1–2 sentences on the house in your own words.\n"+
+ "- listingNotes: short lines with useful extras that have no other field: year built, days on market, Zestimate or Rent Zestimate, price history/cuts, HOA, taxes, heating/cooling, the listing agent's name and brokerage if agent-listed.\n\n"+
+ "Field keys and types:\n"+schema(LIST_IDS)+"\n\n"+(url?"Listing link: "+url+"\n\n":"")+(txt?"Listing text:\n\"\"\"\n"+txt.slice(0,30000)+"\n\"\"\"":"See the attached screenshots.");
+ var opts={modelTier:"default"};if(LIMG.length&&imagesOK)opts.images=LIMG.slice();
+ sample.json(prompt,opts).then(function(res){
+  var fields=(res&&res.fields)||{},ev=(res&&res.evidence)||{},n=0,skipped=0;
+  Object.keys(fields).forEach(function(k){var f=FMAP[k];if(!f||LIST_IDS.indexOf(k)<0)return;if(k==="phone"&&gotPhone)return;var val=normVal(f,fields[k]);if(val==null)return;
+   if(S.manual[k]||(filled(f)&&S.ai[k]!=="listing")){if(JSON.stringify(S.v[k])!==JSON.stringify(val))skipped++;return}
+   if(JSON.stringify(S.v[k])===JSON.stringify(val))return;
+   setVal(k,val,"listing",ev[k]?String(ev[k]):"");n++});
+  persist();renderSheet();
+  st.textContent=n?("Filled "+n+" field"+(n>1?"s":"")+" from the listing."+(skipped?" Kept "+skipped+" answer"+(skipped>1?"s":"")+" you already had.":"")+" Confirm them with the seller on the call."+(S.v.phone?"":" No owner phone found in what you pasted; make sure the \u201cListed by\u201d box was included.")):"Nothing new found in that listing."+(S.v.phone?"":" Make sure the \u201cListed by\u201d box was included.");
+ },function(err){var c=err&&err.code;st.className="status err";
+  st.textContent=c==="not_granted"?"Reading listings was declined.":c==="rate_limited"?"Too many requests. Try again in a minute.":"Couldn’t read that listing. Try pasting the text instead of a screenshot, or the other way round.";
+ }).then(function(){lBusy=false;$("#lgo").disabled=false});
+}
+
+/* ---------- call log (saved in the page) ---------- */
+function renderSaved(){
+ $("#savedn").textContent=SAVED.length;
+ var ul=$("#saved");
+ if(!SAVED.length){ul.innerHTML='<li class="muted" style="border-style:dashed">Saved calls show up here.</li>';return}
+ ul.innerHTML=SAVED.slice().reverse().map(function(c){var v=c.v||{};
+  return '<li><div class="t"><b>'+esc(v.ownerName||"Unnamed seller")+'</b><small>'+esc([v.address,v.date,(v.askingPrice||v.listPrice)?money(v.askingPrice||v.listPrice):""].filter(Boolean).join(" · "))+'</small></div><button data-open="'+c.id+'">Open</button><button data-del="'+c.id+'">Remove</button></li>'}).join("");
+ ul.onclick=function(e){var o=e.target.getAttribute("data-open"),d=e.target.getAttribute("data-del");
+  if(o){var c=SAVED.filter(function(x){return x.id===o})[0];if(c){S=JSON.parse(JSON.stringify(c));S.ai=S.ai||{};S.ev=S.ev||{};S.manual=S.manual||{};persist();$("#transcript").value=S.transcript||"";$("#date").value=S.v.date||"";renderSheet();toast("Loaded")}}
+  if(d){if(e.target.dataset.confirm){publishSaved(SAVED.filter(function(x){return x.id!==d}),"Removed")}else{e.target.dataset.confirm="1";e.target.textContent="Sure?"}}};
+}
+function saveCall(){
+ var rec=JSON.parse(JSON.stringify(S));rec.student=LS.get("pi_student")||"";rec.savedAt=new Date().toISOString();
+ var list=SAVED.filter(function(x){return x.id!==rec.id});list.push(rec);
+ publishSaved(list,"Saved to call log");
+}
+function publishSaved(list,msg){
+ SAVED=list;
+ try{localStorage.setItem("pi_calls",JSON.stringify(list))}catch(e){$("#savestatus").className="status err";$("#savestatus").textContent="This browser won't let the page save (private mode?). Use Copy summary or Download instead.";return}
+ $("#savestatus").className="status";$("#savestatus").textContent="";renderSaved();toast(msg);
+}
+function csvCell(v){v=v==null?"":Array.isArray(v)?v.join("; "):String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function exportCSV(){
+ if(!SAVED.length){toast("No saved calls yet");return}
+ var cols=F.map(function(f){return f.id}),head=["Saved at","Caller","Date","Path","Outcome"].concat(F.map(function(f){return f.label})).concat(["Transcript"]);
+ var keep=S,rows=[head.map(csvCell).join(",")];
+ SAVED.forEach(function(c){S=c;S.v=S.v||{};var o=outcome();rows.push([c.savedAt||"",c.student||"",(c.v||{}).date||"",path()||"",o.t||""].concat(cols.map(function(k){return (c.v||{})[k]})).concat([c.transcript||""]).map(csvCell).join(","))});
+ S=keep;
+ download("PI_Sheet_calls_"+today()+".csv","﻿"+rows.join("\r\n"),"text/csv");
+}
+function download(name,text,type){var b=new Blob([text],{type:type}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(u);a.remove()},500)}
+function wireLog(){
+ $("#exportcsv").onclick=exportCSV;
+ $("#backup").onclick=function(){download("PI_Sheet_backup_"+today()+".json",JSON.stringify({app:"pi-sheet",version:1,calls:SAVED},null,1),"application/json")};
+ $("#restore").onclick=function(){$("#restorefile").click()};
+ $("#restorefile").onchange=function(){var f=this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{var d=JSON.parse(r.result),list=Array.isArray(d)?d:d.calls;if(!Array.isArray(list))throw 0;
+  var ids={};SAVED.forEach(function(c){ids[c.id]=1});var merged=SAVED.concat(list.filter(function(c){return c&&c.id&&!ids[c.id]}));publishSaved(merged,"Restored "+(merged.length-SAVED.length)+" call(s)")}catch(e){toast("That file isn't a PI Sheet backup")}};r.readAsText(f);this.value=""};
+}
+/* ---------- send to My OfferTermz CRM ---------- */
+var CRM_SERVER="My OfferTermz CRM",PIPELINE="shrVee9NhqnkgQ8sirVh";
+var STAGES=[["1a58875d-328d-48ef-a4b8-2f339371d34c","Untouched"],["89618adc-33d3-4bdf-a4d9-5c9b20e3aed1","Contact Attempted"],["d0b6ab3a-9ff0-4dc9-94cb-17a0340d2df2","Initial conversation completed"],["4d0fcbee-5188-4ec8-a698-98bba0cd3049","Human following-up in progress"],["76e14f4a-9da9-4620-a59c-dd9f153cf58e","Sam following-up in progress"],["b697958b-8be0-40c3-99e3-7cce701d9bf5","Interested / Warm Lead"],["f3b082a6-1b57-4de0-97b5-2adadfc75d40","🔥 Hot Lead"],["5aed8a7c-88a6-4570-b341-125a9b9b8440","Contract sent to seller"],["01369288-d573-479f-84f8-46d7fc2f7cf5","Under Contract"],["0180c1fa-bbc6-410b-9042-1fad33babdb2","Title work in progress"],["17d22296-609c-4b9e-8105-2a3c3a8d4fe9","🏡 Closed"]];
+var mcp=null,crmBusy=false,stagePicked=false;
+function suggestedStage(){var o=outcome().k;return (o==="go"||o==="info")?"b697958b-8be0-40c3-99e3-7cce701d9bf5":"d0b6ab3a-9ff0-4dc9-94cb-17a0340d2df2"}
+function setupCRM(m){
+ mcp=m;if(!m)return;
+ $("#crmbox").style.display="";
+ var sel=$("#crmstage");sel.innerHTML=STAGES.map(function(s){return '<option value="'+s[0]+'">'+esc(s[1])+'</option>'}).join("");
+ sel.value=(S.crm&&S.crm.stage)||suggestedStage();
+ sel.onchange=function(){stagePicked=true};
+ $("#crmsend").onclick=sendCRM;
+ crmStatusIdle();
+}
+function crmStatusIdle(){var s=$("#crmstatus");if(!s)return;s.className="status";s.textContent=S.crm&&S.crm.contactId?"Already sent. Sending again updates the contact and pipeline card and adds a fresh note.":"Creates or updates the seller contact with the property details (price, mortgage, beds/baths, listing link…), adds this sheet as a note, and puts them in the Sellers Pipeline."}
+function unwrap(r){
+ var p=r&&(r.payload!==undefined?r.payload:r);
+ if(typeof p==="string"){try{p=JSON.parse(p)}catch(e){}}
+ if(p&&p.content&&Array.isArray(p.content)){var t=p.content.map(function(c){return c.text||""}).join("");try{p=JSON.parse(t)}catch(e){p=t}}
+ return p;
+}
+function crmOp(operationId,params,reason,key){
+ return mcp.callTool(CRM_SERVER,"execute_operation",{operationId:operationId,params:params,idempotencyKey:key,reason:reason}).then(function(r){
+  var p=unwrap(r);
+  if(p&&p.success===false){var m=(p.error&&(p.error.message||p.error))||p.message||"The CRM refused the request";throw {message:String(m)}}
+  return (p&&p.data)||p;
+ });
+}
+var CF={askingPrice:"FCEMlpR4KCNWJA9IBm5Y",loanBalance:"QlLMm3eCATp3kcE9e6Fy",payment:"SZVMky2nmSm6p3U3e4lN",repairAmt:"QcCAllabJXXiMwg4HLnF",
+ beds:"oGMG2mtVFlcplkhzWbFa",baths:"7giSoWePLDkjH37MdDfv",sqft:"xl8EbFS20oOcH0NeRRIv",reason:"joIn0g93JNJMv8RKeokz",
+ condition:"bUbgjZLVBbGbxkoNm9BE",leadFrom:"JUK7a9cP1loFegarxfqZ",propertyType:"94rip4MLAz4EEamC1RQH",contactType:"SLOpMt6bxTScv6lGHT1X",
+ interestedIn:"11DfLVlXM0XhQgNHPlTq",termz:"zcRHeCglmehj9oVtecf4",zillow:"wRjBCqNNVNK5c6ZuBX6l",redfin:"o8Feg58fwuUqmgxgfeMW",propstream:"1frqKGBmbNxHxjF2pUS8",extraLink:"3Q693xaZ0QYemJEiz8qZ"};
+function crmCustomFields(){
+ var out=[],add=function(id,v){if(v!=null&&v!=="")out.push({id:id,fieldValue:v})};
+ var ap=num(S.v.askingPrice);if(ap==null)ap=num(S.v.listPrice);if(ap!=null)add(CF.askingPrice,ap);
+ ["loanBalance","payment","repairAmt"].forEach(function(k){var n=num(S.v[k]);if(n!=null&&(k!=="repairAmt"||yes("repairs")))add(CF[k],n)});
+ ["beds","baths","sqft"].forEach(function(k){var n=num(S.v[k]);if(n!=null)add(CF[k],n)});
+ add(CF.reason,S.v.reason);
+ var cond=[];if(yes("repairs"))cond.push("Needs repairs"+(num(S.v.repairAmt)!=null?" (about "+money(S.v.repairAmt)+")":""));else if(no("repairs"))cond.push("Seller says no repairs needed");
+ if(S.v.description)cond.push(S.v.description);add(CF.condition,cond.join(". "));
+ var src=(S.v.source||"").toLowerCase(),lf=src.indexOf("zillow")>-1?"Zillow":(src.indexOf("facebook")>-1||src.indexOf("marketplace")>-1)?"Facebook marketplace":src.indexOf("referr")>-1||src.indexOf("referal")>-1?"Referal":src.indexOf("wholesal")>-1?"Wholesaler":src.indexOf("paid")>-1?"Paid Leads":src?"Other":"";
+ add(CF.leadFrom,lf);
+ add(CF.propertyType,S.v.propertyType);
+ add(CF.contactType,"Seller");add(CF.interestedIn,"Selling a property");
+ var t=yes("sellForOwed")||yes("takePayments")?"Yes":yes("cashOnly")||no("hearImmediately")?"No":yes("hearImmediately")||no("sellForOwed")?"Maybe":"";add(CF.termz,t);
+ var u=S.v.listingUrl||"",lu=u.toLowerCase();
+ if(u){if(lu.indexOf("zillow")>-1)add(CF.zillow,u);else if(lu.indexOf("redfin")>-1)add(CF.redfin,u);else if(lu.indexOf("propstream")>-1)add(CF.propstream,u);else add(CF.extraLink,u)}
+ return out;
+}
+function sendCRM(){
+ if(crmBusy)return;
+ var name=(S.v.ownerName||"").trim(),phone=(S.v.phone||"").trim(),email=(S.v.email||"").trim();
+ var st=$("#crmstatus");st.className="status";
+ if(!name&&!phone&&!email){st.className="status err";st.textContent="Add at least the seller's name, phone or email first.";return}
+ crmBusy=true;$("#crmsend").disabled=true;
+ var stage=$("#crmstage").value,stamp=Date.now().toString(36),parts=name.split(/\s+/);
+ var body={};if(name){body.name=name;body.firstName=parts[0];if(parts.length>1)body.lastName=parts.slice(1).join(" ")}
+ if(phone)body.phone=phone;if(email)body.email=email;
+ if(S.v.address)body.address1=S.v.address;if(S.v.city)body.city=S.v.city;if(S.v.state)body.state=S.v.state;
+ if(S.v.zip)body.postalCode=S.v.zip;
+ body.source=S.v.source||"PI Sheet call";
+ body.customFields=crmCustomFields();
+ var contactId;
+ st.textContent="Saving contact…";
+ crmOp("upsert-contact",{body:body},"Save seller from PI Sheet call",S.id+"-c-"+stamp).then(function(d){
+  contactId=(d&&d.contact&&(d.contact.id||d.contact._id))||(d&&d.id);
+  if(!contactId)throw {message:"The CRM didn't return a contact ID"};
+  st.textContent="Adding the PI Sheet as a note…";
+  return crmOp("create-note",{path:{contactId:contactId},body:{title:"PI Sheet "+(S.v.date||""),body:summary()}},"Attach PI Sheet to seller",S.id+"-n-"+stamp);
+ }).then(function(){
+  st.textContent="Updating the Sellers Pipeline…";
+  var ob={pipelineId:PIPELINE,pipelineStageId:stage,contactId:contactId,status:"open",name:(name||"Seller")+(S.v.address?" – "+S.v.address:"")};
+  var mv=num(S.v.askingPrice);if(mv==null)mv=num(S.v.listPrice);if(mv!=null)ob.monetaryValue=mv;
+  if(S.crm&&S.crm.oppId&&S.crm.contactId===contactId)ob.id=S.crm.oppId;
+  return crmOp("Upsert-opportunity",{body:ob},"Add seller to Sellers Pipeline",S.id+"-o-"+stamp);
+ }).then(function(d){
+  var oppId=(d&&d.opportunity&&(d.opportunity.id||d.opportunity._id))||(S.crm&&S.crm.oppId)||"";
+  S.crm={contactId:contactId,oppId:oppId,stage:stage,sentAt:new Date().toISOString()};persist();
+  var label=STAGES.filter(function(s){return s[0]===stage})[0];
+  st.className="status";st.textContent="Sent to the CRM: contact saved, note added, pipeline stage “"+(label?label[1]:"")+"”.";toast("Sent to CRM");
+ }).catch(function(err){
+  var c=err&&err.code,m=(err&&err.message)||"";
+  st.className="status err";
+  st.textContent=c==="not_granted"?"Access to the CRM connector was declined.":c==="server_not_connected"?"Your OfferTermz CRM connector isn't connected in Claude right now.":(contactId?"The contact was saved, but a later step failed: ":"Couldn't send to the CRM: ")+(m||c||"unknown error")+". Try again.";
+ }).then(function(){crmBusy=false;$("#crmsend").disabled=false});
+}
+
+/* ---------- boot ---------- */
+try{var stored=JSON.parse(localStorage.getItem("pi_calls")||"null");if(Array.isArray(stored))SAVED=stored}catch(e){}
+shell();wire();renderSheet();renderSaved();wireLog();
+lastFillLen=0;
+setupDictation(makeDictation());
+wireListing();
+var deferredPrompt=null;
+window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();deferredPrompt=e;var b=$("#install");b.style.display="";b.onclick=function(){deferredPrompt.prompt();deferredPrompt.userChoice.then(function(){b.style.display="none";deferredPrompt=null})}});
+if("serviceWorker" in navigator&&location.protocol!=="file:"){navigator.serviceWorker.register("sw.js").catch(function(){})}
+})();
+</script>
+</body>
+</html>
